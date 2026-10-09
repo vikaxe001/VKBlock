@@ -17,29 +17,22 @@
       return false;
     }
 
-    const hostname = url.hostname.toLowerCase();
-    const pathname = url.pathname;
+    const host = url.hostname.toLowerCase();
 
     return blockedEntries.some(entry => {
-      if (!entry || typeof entry.domain !== "string" ||
-          typeof entry.path !== "string") {
-        return false;
-      }
-
-      const domain = entry.domain.toLowerCase()
-        .replace(/^(www|m)\./, "");
+      const domain = entry.domain.toLowerCase();
+      const path = entry.path;
 
       const hostMatches =
-        hostname === domain ||
-        hostname === "www." + domain ||
-        hostname === "m." + domain;
+        host === domain ||
+        host === "www." + domain ||
+        host === "m." + domain;
 
-      if (!hostMatches) return false;
-
-      const path = entry.path.replace(/\/+$/, "") || "/";
-
-      return pathname === path ||
-        (path !== "/" && pathname.startsWith(path + "/"));
+      return hostMatches && (
+        url.pathname === path ||
+        (path !== "/" &&
+          url.pathname.startsWith(path + "/"))
+      );
     });
   }
 
@@ -51,17 +44,19 @@
     lastCheckedUrl = currentUrl;
 
     if (isBlocked(currentUrl)) {
-      location.replace(chrome.runtime.getURL("blocked.html"));
+      const target =
+        chrome.runtime.getURL("blocked.html") +
+        "#" + currentUrl;
+
+      location.replace(target);
     }
   }
 
-  // Hämta den lokalt sparade blockeringslistan.
   chrome.storage.local.get("blockedEntries", result => {
     blockedEntries = result.blockedEntries || [];
     checkUrl();
   });
 
-  // Reagera när listan uppdateras.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes.blockedEntries) {
       blockedEntries = changes.blockedEntries.newValue || [];
@@ -70,12 +65,11 @@
     }
   });
 
-  // Fånga intern navigering utan sidomladdning.
   window.addEventListener("popstate", checkUrl);
   window.addEventListener("hashchange", checkUrl);
   window.addEventListener("yt-navigate-finish", checkUrl);
 
-  // Reservkontroll för webbplatser som ändrar
-  // webbadressen med history.pushState().
+  // Kontroll av interna sidbyten.
+  // Inga nätverksanrop sker här.
   setInterval(checkUrl, 500);
 })();
