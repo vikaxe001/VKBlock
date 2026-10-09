@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "blocked": [
+    {
+      "domain": "youtube.com",
+      "path": "/shorts"
+    }
+  ]
+}
