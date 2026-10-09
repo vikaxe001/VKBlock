@@ -20,7 +20,7 @@
     .container {
       text-align: center;
       padding: 40px;
-      max-width: 440px;
+      max-width: 520px;
     }
 
     .icon {
@@ -39,6 +39,28 @@
       line-height: 1.6;
     }
 
+    #blocked-address {
+      color: #333;
+      font-weight: bold;
+      overflow-wrap: anywhere;
+    }
+
+    .button {
+      display: inline-block;
+      margin-top: 22px;
+      padding: 13px 24px;
+      border-radius: 8px;
+      background: #2563eb;
+      color: white;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: bold;
+    }
+
+    .button:hover {
+      background: #1d4ed8;
+    }
+
     .footer {
       margin-top: 40px;
       font-size: 12px;
@@ -47,11 +69,25 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <main class="container">
     <div class="icon">🔒</div>
+
     <h1>Webbsidan är blockerad</h1>
-    <p>Den här webbadressen är inte tillgänglig.</p>
+
+    <p>
+      Webbplatsen
+      <span id="blocked-address"></span>
+      är inte tillgänglig för dig.
+    </p>
+
+    <a id="home-link" class="button"
+       href="https://www.google.com/">
+      ← Tillbaka till startsidan
+    </a>
+
     <div class="footer">VKBlock</div>
-  </div>
+  </main>
+
+  <script src="blocked.js"></script>
 </body>
 </html>
