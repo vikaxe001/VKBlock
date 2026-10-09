@@ -31,8 +31,8 @@ function createRule(entry, id) {
   const pathname = escapeRegex(path.replace(/\/+$/, "") || "/");
 
   const regex =
-    `^https?://(?:(?:www|m)\\.)?${host}` +
-    `${pathname === "/" ? "(?:[?#]|$)" : "(?:[/?#]|$)"}`;
+    `^https?://(?:(?:www|m)\\.)?${host}${pathname}` +
+    `(?:[/?#]|$)`;
 
   return {
     id,
