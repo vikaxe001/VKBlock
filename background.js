@@ -117,7 +117,9 @@ async function updateBlocklist() {
     }
 
     const entries = data.blocked.map(normalizeEntry);
-    const rules = entries.map(createRule);
+    const rules = entries.map((entry, index) =>
+      createRule(entry, index + 1)
+    );
 
     for (const rule of rules) {
       const result =
