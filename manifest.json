@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "VKBlock",
+  "version": "1.0.0",
+  "description": "Centralt hanterad URL-blockering.",
+  "permissions": [
+    "alarms",
+    "storage",
+    "declarativeNetRequest",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
