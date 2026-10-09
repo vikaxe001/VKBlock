@@ -1,38 +1,70 @@
 const BLOCKLIST_URL =
   "https://vikaxe001.github.io/VKBlock/blocklist.json";
 
-const UPDATE_INTERVAL = 1; // Minuter
+const UPDATE_INTERVAL = 5;
 const ALARM_NAME = "update-blocklist";
+const DEFAULT_HOME = "https://www.google.com/";
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function createRule(entry, id) {
-  if (!entry || typeof entry.domain !== "string" ||
+function normalizeEntry(entry) {
+  if (!entry ||
+      typeof entry.domain !== "string" ||
       typeof entry.path !== "string") {
     throw new Error("Ogiltig blockeringsregel");
   }
 
-  const domain = entry.domain.toLowerCase();
-  const path = entry.path;
+  const domain = entry.domain.toLowerCase()
+    .replace(/^(www|m)\./, "");
+
+  const path = entry.path.replace(/\/+$/, "") || "/";
 
   if (!/^[a-z0-9.-]+$/.test(domain) ||
       !domain.includes(".") ||
       !path.startsWith("/") ||
-      path.includes("*") ||
-      path.includes("?") ||
-      path.includes("#")) {
+      /[?#*]/.test(path)) {
     throw new Error("Ogiltig domän eller sökväg");
   }
 
-  // Matchar domänen och vanliga www-/m-varianter.
-  const host = escapeRegex(domain.replace(/^(www|m)\./, ""));
-  const pathname = escapeRegex(path.replace(/\/+$/, "") || "/");
+  return { domain, path };
+}
+
+function isBlocked(address, entries) {
+  try {
+    const url = new URL(address);
+    const host = url.hostname.toLowerCase();
+
+    return entries.some(entry => {
+      const domain = entry.domain;
+      const hostMatches =
+        host === domain ||
+        host === "www." + domain ||
+        host === "m." + domain;
+
+      return hostMatches && (
+        url.pathname === entry.path ||
+        (entry.path !== "/" &&
+          url.pathname.startsWith(entry.path + "/"))
+      );
+    });
+  } catch {
+    return false;
+  }
+}
+
+function createRule(entry, id) {
+  const domain = escapeRegex(entry.domain);
+  const pathname = escapeRegex(entry.path);
+
+  const pathEnd = entry.path === "/"
+    ? ".*"
+    : "(?:[/?#]|$).*";
 
   const regex =
-    `^https?://(?:(?:www|m)\\.)?${host}${pathname}` +
-    `(?:[/?#]|$)`;
+    `^https?://(?:(?:www|m)\\.)?${domain}` +
+    `${pathname}${pathEnd}`;
 
   return {
     id,
@@ -40,7 +72,8 @@ function createRule(entry, id) {
     action: {
       type: "redirect",
       redirect: {
-        extensionPath: "/blocked.html"
+        regexSubstitution:
+          chrome.runtime.getURL("blocked.html") + "#\\0"
       }
     },
     condition: {
@@ -48,6 +81,22 @@ function createRule(entry, id) {
       resourceTypes: ["main_frame"]
     }
   };
+}
+
+function getHomepage(value, entries) {
+  try {
+    const url = new URL(value || DEFAULT_HOME);
+
+    if (!["http:", "https:"].includes(url.protocol) ||
+        url.username || url.password ||
+        isBlocked(url.href, entries)) {
+      return DEFAULT_HOME;
+    }
+
+    return url.href;
+  } catch {
+    return DEFAULT_HOME;
+  }
 }
 
 async function updateBlocklist() {
@@ -67,11 +116,9 @@ async function updateBlocklist() {
       throw new Error("Ogiltig blockeringslista");
     }
 
-    const rules = data.blocked.map((entry, index) =>
-      createRule(entry, index + 1)
-    );
+    const entries = data.blocked.map(normalizeEntry);
+    const rules = entries.map(createRule);
 
-    // Kontrollera att alla regexregler stöds.
     for (const rule of rules) {
       const result =
         await chrome.declarativeNetRequest.isRegexSupported({
@@ -79,7 +126,9 @@ async function updateBlocklist() {
         });
 
       if (!result.isSupported) {
-        throw new Error("Regex stöds inte: " + result.reason);
+        throw new Error(
+          "Regex stöds inte: " + result.reason
+        );
       }
     }
 
@@ -92,21 +141,27 @@ async function updateBlocklist() {
     });
 
     await chrome.storage.local.set({
-      blockedEntries: data.blocked,
+      blockedEntries: entries,
+      homepage: getHomepage(data.homepage, entries),
       lastUpdated: new Date().toISOString()
     });
 
-    console.log("VKBlock: Uppdaterade", rules.length, "regler");
+    console.log(
+      "VKBlock: Uppdaterade",
+      rules.length,
+      "regler"
+    );
   } catch (error) {
-    console.error("VKBlock: Uppdatering misslyckades", error);
+    console.error(
+      "VKBlock: Uppdatering misslyckades",
+      error
+    );
   }
 }
 
-// Kör direkt vid installation och uppstart.
 chrome.runtime.onInstalled.addListener(updateBlocklist);
 chrome.runtime.onStartup.addListener(updateBlocklist);
 
-// Kontrollera blockeringslistan varje minut.
 chrome.alarms.create(ALARM_NAME, {
   periodInMinutes: UPDATE_INTERVAL
 });
