@@ -1,5 +1,6 @@
 {
-  "version": 1,
+  "version": 2,
+  "homepage": "https://sites.google.com/utb.vaxjo.se/start",
   "blocked": [
     {
       "domain": "youtube.com",
