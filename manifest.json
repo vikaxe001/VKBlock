@@ -1,7 +1,8 @@
 {
   "manifest_version": 3,
   "name": "VKBlock",
-  "version": "1.0.0",
+  "version": "1.0.1",
+  "update_url": "https://vikaxe001.github.io/VKBlock/updates.xml",
   "description": "Centralt hanterad URL-blockering.",
   "permissions": [
     "alarms",
