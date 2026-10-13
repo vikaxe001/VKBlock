@@ -1,457 +1,234 @@
 # VKBlock
 
-**VKBlock** är en tjänst för att begränsa åtkomsten till valda webbplatser i webbläsare utifrån en fördefinierad blocklista.
+En tjänst för att begränsa åtkomsten till valda webbplatser i webbläsare utifrån en fördefinierad blocklista.
 
-Syftet är att möjliggöra flexibel och central hantering av blockerade webbadresser utan att behöva uppdatera eller installera om mjukvaran varje gång blockeringslistan förändras.
+VKBlock gör det möjligt att centralt administrera vilka webbplatser eller delar av webbplatser som ska blockeras. Blockeringslistan uppdateras automatiskt utan att tillägget behöver installeras om.
 
-VKBlock använder en offentligt tillgänglig blockeringslista på GitHub Pages och uppdaterar denna automatiskt med ett konfigurerbart intervall.
+**Aktuell version:** 1.0.4  
+**Webbläsarstöd:** Chrome (stöd för Safari planeras)  
+**Konfiguration:** Central `blocklist.txt`  
+**Källkod:** [GitHub](https://github.com/vikaxe001/VKBlock)
 
-## Funktioner
+---
 
-- **Central blockeringslista:** Webbadresser som ska blockeras administreras i en JSON-fil på GitHub Pages.
-- **Specifika URL-sökvägar:** Blockerar delar av webbplatser utan att nödvändigtvis blockera hela domänen.
-- **Automatisk uppdatering:** Hämtar blockeringslistan var femte minut som standard.
-- **Stöd för intern navigering:** Kan upptäcka adressändringar på webbplatser som använder dynamisk navigering, exempelvis YouTube.
-- **Anpassad blockeringssida:** Visar vilken webbadress som blockerats.
-- **Konfigurerbar startsida:** Användaren kan återvända till en centralt angiven startsida.
-- **Central distribution:** Kan tvångsinstalleras via Google Admin.
-- **Inkognitoläge:** Kan konfigureras som obligatoriskt tillägg för inkognitosurfning på hanterade Chrome-enheter som stöder policyn.
-- **Lokal regelhantering:** Senast installerade blockeringsregler fortsätter fungera om blockeringslistan tillfälligt inte kan hämtas.
+## Innehållsförteckning
 
-VKBlock använder Chrome Extensions Manifest V3 och Chromes inbyggda API:er.
+### 1. Beskrivning av tjänsten
+- [1.1 Syfte och funktion](#11-syfte-och-funktion)
+- [1.2 Blockeringsregler](#12-blockeringsregler)
+- [1.3 Uppdatering och lokal lagring](#13-uppdatering-och-lokal-lagring)
+- [1.4 Informationssäkerhet och integritet](#14-informationssäkerhet-och-integritet)
+- [1.5 Begränsningar](#15-begränsningar)
 
-## Hur fungerar VKBlock?
+### 2. Utveckling av tjänsten
+- [2.1 Teknik och arkitektur](#21-teknik-och-arkitektur)
+- [2.2 Projektets filer](#22-projektets-filer)
+- [2.3 Hantering av blockeringslistan](#23-hantering-av-blockeringslistan)
+- [2.4 Utveckling och testning](#24-utveckling-och-testning)
+- [2.5 Paketering och publicering](#25-paketering-och-publicering)
+- [2.6 Central distribution](#26-central-distribution)
+- [2.7 Framtida utveckling](#27-framtida-utveckling)
 
-VKBlock består av två huvuddelar: ett Chrome-tillägg som installeras i webbläsaren och en central konfigurationsfil som publiceras via GitHub Pages.
+---
 
-När tillägget startas hämtas blockeringslistan från GitHub. Listan översätts till blockeringsregler som installeras lokalt i Chrome med hjälp av `declarativeNetRequest`.
+# 1. Beskrivning av tjänsten
 
-Chrome kan därefter blockera matchande webbadresser utan att behöva kontakta GitHub vid varje sidbesök.
+## 1.1 Syfte och funktion
 
-Tillägget kontrollerar regelbundet om blockeringslistan har förändrats. Om en ny lista finns uppdateras de lokala reglerna automatiskt.
+VKBlock är utvecklat för att begränsa åtkomsten till valda webbplatser och webbinnehåll. Tjänsten kan exempelvis användas inom utbildningsverksamhet för att minska tillgången till distraherande innehåll och bidra till ökad studiero.
 
-För webbplatser som använder intern navigering finns dessutom ett innehållsskript som kontrollerar webbadressändringar utan att en fullständig sidomladdning behöver ske.
+VKBlock erbjuder:
 
-### Exempel
+- Central administration av blockerade webbadresser.
+- Blockering av hela domäner eller specifika sökvägar.
+- Automatisk uppdatering av blockeringslistan.
+- Lokal lagring av blockeringsregler.
+- Fortsatt blockering vid tillfälliga uppdateringsproblem.
+- Hantering av dynamisk navigering inom webbplatser.
+- Anpassad blockeringssida med länk till en fördefinierad startsida.
 
-Om blockeringslistan innehåller:
+Tjänsten består av ett webbläsartillägg och en centralt publicerad blockeringslista. Blockeringen genomförs lokalt i användarens webbläsare.
 
-`youtube.com/shorts`
+## 1.2 Blockeringsregler
 
-ska följande adresser blockeras:
-
-- `https://youtube.com/shorts`
-- `https://www.youtube.com/shorts/abc123`
-- `https://m.youtube.com/shorts/abc123`
-
-Samtidigt förblir exempelvis följande adresser tillgängliga:
-
-- `https://www.youtube.com/`
-- `https://www.youtube.com/watch?v=abc123`
-
-Blockeringen baseras på matchande domän och sökväg. Det krävs ingen separat lista över tillåtna webbadresser.
-
-Den aktuella versionen stöder domänen och dess vanliga `www.`- och `m.`-varianter. Godtyckliga underdomäner och jokertecken stöds inte i blockeringslistan.
-
-## Projektets filer
-
-| Fil | Beskrivning |
-|---|---|
-| `manifest.json` | Tilläggets grundkonfiguration, behörigheter och versionsnummer. |
-| `background.js` | Hämtar blockeringslistan och uppdaterar Chromes blockeringsregler. |
-| `content.js` | Kontrollerar interna adressändringar på webbplatser. |
-| `blocked.html` | HTML och utseende för blockeringssidan. |
-| `blocked.js` | Visar blockerad adress och hanterar länken till startsidan. |
-| `blocklist.json` | Central konfiguration av blockerade webbadresser och startsida. |
-| `updates.xml` | Anger tillgänglig version och nedladdningsadress för tillägget. |
-| `VKBlock-main.crx` | Signerat installationspaket för Chrome. |
-
-Den privata signeringsnyckeln (`.pem`) ska aldrig publiceras i detta repository.
-
-## Konfiguration av blockeringslistan
-
-Blockeringslistan hanteras genom filen `blocklist.json`.
+Blockeringslistan hanteras genom en textfil, `blocklist.txt`, där varje rad motsvarar en blockeringsregel.
 
 Exempel:
 
-```json
-{
-  "version": 2,
-  "homepage": "https://www.google.com/",
-  "blocked": [
-    {
-      "domain": "youtube.com",
-      "path": "/shorts"
-    },
-    {
-      "domain": "reddit.com",
-      "path": "/r/gaming"
-    },
-    {
-      "domain": "example.com",
-      "path": "/games"
-    }
-  ]
-}
+```text
+sites.google.com/view/classroom6x/
+1001games.com
+aarp.org
+youtube.com/shorts/
 ```
 
-### Förklaring av inställningar
+**Domänblockering**
 
-**version**
+En regel utan sökväg blockerar hela domänen inklusive underdomäner.
 
-Versionsmarkering för blockeringslistans format. Den styr inte Chrome-tilläggets versionsnummer eller uppdateringsmekanism.
+Exempel: `1001games.com` blockerar även `www.1001games.com` och dess undersidor.
 
-**homepage**
+**Sökvägsblockering**
 
-Webbadress som användaren ska skickas till när denne väljer "Tillbaka till startsidan" på blockeringssidan.
+En regel med sökväg blockerar endast den angivna sökvägen och dess undersidor.
 
-Om inställningen saknas eller är ogiltig används:
+Exempel: `sites.google.com/view/classroom6x/` blockerar:
 
-`https://www.google.com/`
+- `sites.google.com/view/classroom6x/`
+- `sites.google.com/view/classroom6x/spel`
 
-**blocked**
+Men tillåter:
 
-En lista över blockeringsregler.
+- `sites.google.com/view/legitimsida`
+- `sites.google.com/view/classroom6x2/`
 
-Varje regel innehåller:
+Tomma rader ignoreras och rader som börjar med `#` kan användas som kommentarer.
 
-- `domain` – domänen som ska kontrolleras.
-- `path` – sökvägen som ska blockeras.
+## 1.3 Uppdatering och lokal lagring
 
-En sökväg omfattar även underliggande sökvägar.
+VKBlock hämtar blockeringslistan från en central adress med ett fördefinierat intervall, normalt var femte minut.
 
-Exempelvis blockerar `/shorts` både `/shorts` och `/shorts/abc123`, men inte `/shortstories`.
+Reglerna lagras lokalt på användarens enhet och fortsätter att fungera även om en uppdatering tillfälligt misslyckas.
 
-### Uppdatera blockeringslistan
+Ändringar i blockeringslistan kräver därför ingen ny version av tillägget.
 
-1. Öppna `blocklist.json` på GitHub.
-2. Klicka på **Edit**.
-3. Lägg till, ändra eller ta bort blockeringsregler.
-4. Spara genom **Commit changes**.
-5. Vänta tills GitHub Pages har publicerat den uppdaterade filen.
+Ändringar i programkoden kräver däremot att en ny version publiceras och distribueras.
 
-VKBlock kontrollerar automatiskt blockeringslistan var femte minut som standard.
+## 1.4 Informationssäkerhet och integritet
 
-**Ingen ny paketering, installation eller ändring i Google Admin behövs när endast blockeringslistan förändras.**
+VKBlock genomför blockeringen lokalt och skickar inte användarnas webbhistorik eller uppgifter om blockerade sidbesök till någon central tjänst.
 
-Uppdatering sker inte nödvändigtvis exakt efter fem minuter eftersom schemalagda bakgrundsprocesser påverkas av Chromes aktivitet och vilolägen.
+Den centrala blockeringslistan innehåller endast regler för vilka webbadresser som ska blockeras.
 
-### Blockeringslistans adress
+Källkoden är öppet tillgänglig för granskning och vidareutveckling. Åtkomst till publicering och ändring av blockeringslistan bör begränsas till behöriga personer.
 
-`https://vikaxe001.github.io/VKBlock/blocklist.json`
+## 1.5 Begränsningar
 
-## Blockeringssidan
+VKBlock fungerar endast i webbläsare där tillägget stöds, är installerat och aktiverat.
 
-När en användare försöker öppna en blockerad webbadress visas en lokal informationssida.
+Blockeringen baseras på webbadresser och inte på analys av webbplatsers innehåll. Det innebär att samma innehåll i vissa fall kan nås genom alternativa domäner eller tjänster.
 
-Exempel:
+På webbplatser med dynamisk navigering kan en kort fördröjning förekomma innan blockeringen genomförs.
 
-**Webbsidan är blockerad**
+VKBlock är ett kompletterande verktyg för webbadressblockering och ska inte betraktas som ett fullständigt webbfilter.
 
-Webbplatsen **youtube.com/shorts/abc123** är inte tillgänglig för dig.
+---
 
-**← Tillbaka till startsidan**
+# 2. Utveckling av tjänsten
 
-Blockeringssidan visar domän och sökväg, men inte URL:ens frågeparametrar.
+## 2.1 Teknik och arkitektur
 
-Startsidan bestäms genom `homepage` i blockeringslistan.
+VKBlock är utvecklat med JavaScript, HTML och CSS.
 
-Blockeringssidan ingår i tilläggspaketet och fungerar därför utan att någon extern webbsida behöver laddas.
+Den nuvarande implementationen använder Chrome Extensions Manifest V3 och följande API:er:
 
-## Automatiska uppdateringar
+- `declarativeNetRequest` – blockering av webbadresser.
+- `storage` – lokal lagring av konfiguration och blockeringsregler.
+- `alarms` – schemalagd uppdatering av blockeringslistan.
 
-VKBlock har två separata uppdateringsmekanismer.
+GitHub används för versionshantering och GitHub Pages för publicering av blockeringslistan och installationsfiler.
 
-### 1. Uppdatering av blockeringslistan
+## 2.2 Projektets filer
 
-Blockeringslistan hämtas automatiskt från GitHub Pages var femte minut.
+| Fil | Funktion |
+|---|---|
+| `manifest.json` | Konfiguration, behörigheter och version. |
+| `background.js` | Hämtning och uppdatering av blockeringsregler. |
+| `content.js` | Kontroll av dynamiska adressändringar. |
+| `blocked.html` | Blockeringssidans innehåll och utseende. |
+| `blocked.js` | Hantering av blockeringssidan. |
+| `blocklist.txt` | Centralt administrerad blockeringslista. |
+| `updates.xml` | Information om nya tilläggsversioner. |
+| `VKBlock-main.crx` | Signerat installationspaket för Chrome. |
 
-Ändringar av blockerade webbadresser eller startsidan kräver ingen ny version av tillägget.
+## 2.3 Hantering av blockeringslistan
 
-Senast fungerande blockeringsregler finns kvar lokalt om hämtningen misslyckas.
+Blockeringslistan publiceras på:
 
-### 2. Uppdatering av Chrome-tillägget
+https://vikaxe001.github.io/VKBlock/blocklist.txt
 
-Ändringar av tilläggets programkod, behörigheter eller gränssnitt kräver en ny version av CRX-paketet.
+För att ändra blockerade webbadresser:
 
-Chrome kontrollerar normalt automatiskt om en ny version finns, vid uppstart och återkommande med några timmars mellanrum.
+1. Öppna `blocklist.txt` i GitHub.
+2. Lägg till, ändra eller ta bort regler.
+3. Spara genom att skapa en commit.
+4. Kontrollera att ändringen publicerats via GitHub Pages.
 
-Uppdateringsmekanismen använder filen `updates.xml` som pekar på den senaste publicerade CRX-filen.
+Tillägget hämtar därefter den uppdaterade listan automatiskt.
 
-När en nyare version identifieras laddar Chrome ned och installerar den automatiskt.
+Varje rad ska innehålla en giltig domän eller domän med sökväg. Den nuvarande implementationen stöder upp till 1 000 regler.
 
-Det krävs normalt ingen ny installation via Google Admin så länge tilläggets ID och uppdateringsadress är oförändrade.
+## 2.4 Utveckling och testning
 
-## Central installation via Google Admin
+Den aktuella Chrome-versionen kan testas lokalt genom att läsa in tillägget i utvecklarläge.
 
-VKBlock kan distribueras till hanterade ChromeOS-enheter och Chrome-profiler genom Google Workspace.
+1. Ladda ned projektets källkod.
+2. Öppna `chrome://extensions`.
+3. Aktivera **Utvecklarläge**.
+4. Välj **Läs in opaketerat tillägg**.
+5. Välj mappen som innehåller `manifest.json`.
 
-### Förutsättningar
+Verifiera särskilt att:
 
-- Tillgång till Google Admin med behörighet att hantera Chrome-tillägg.
-- En organisationsenhet (OU) med de användare som ska omfattas.
-- Ett signerat CRX-paket.
-- En offentligt tillgänglig `updates.xml`.
-- En fungerande HTTPS-adress till CRX-paketet.
+- Domäner och sökvägar blockeras korrekt.
+- Andra sökvägar på samma domän förblir tillgängliga.
+- Blockeringssidan fungerar.
+- Dynamisk navigering hanteras.
+- Befintliga regler kvarstår vid uppdateringsfel.
 
-### Installera tillägget
+## 2.5 Paketering och publicering
 
-1. Öppna [Google Admin](https://admin.google.com).
-2. Navigera till **Enheter → Chrome → Appar och tillägg → Användare och webbläsare**.
-3. Välj organisationsenheten där VKBlock ska distribueras.
-4. Klicka på **Lägg till Chrome-app eller tillägg via ID**.
-5. Välj installation från en anpassad URL.
-6. Ange tilläggets ID och uppdateringsadress.
-7. Välj installationspolicy **Tvångsinstallera**.
-8. Spara inställningarna.
+Ändringar i programkoden kräver en ny version av tillägget.
 
-**Tilläggs-ID för denna distribution:**
+För Chrome gäller följande:
+
+1. Uppdatera versionsnumret i `manifest.json`.
+2. Testa ändringarna.
+3. Paketera tillägget som en CRX-fil.
+4. Använd samma privata signeringsnyckel som tidigare.
+5. Publicera den nya CRX-filen.
+6. Uppdatera versionsnumret i `updates.xml`.
+
+**Viktigt:** Den privata signeringsnyckeln (`.pem`) får inte publiceras i GitHub.
+
+Nuvarande distributionsfiler:
+
+- [CRX-paket](https://vikaxe001.github.io/VKBlock/VKBlock-main.crx)
+- [Uppdateringsinformation](https://vikaxe001.github.io/VKBlock/updates.xml)
+
+## 2.6 Central distribution
+
+VKBlock är utformat för att kunna distribueras och hanteras centralt i organisationens enhets- och webbläsarmiljö.
+
+**Nuvarande stöd – Chrome**
+
+Chrome-versionen kan distribueras genom Google Admin till hanterade användare och enheter.
+
+Tilläggs-ID:
 
 `ohnheegnfgjmplapdldhilognpjcnnal`
 
-**Uppdateringsadress:**
+Uppdateringsadress:
 
 `https://vikaxe001.github.io/VKBlock/updates.xml`
 
-Administratören kan därefter kontrollera att installationen genomförts genom att öppna `chrome://extensions` på en hanterad Chromebook.
+I Google Admin kan tillägget konfigureras för tvingande installation och central hantering.
 
-### Inkognitoläge
+Användning i inkognitoläge styrs genom tillämpliga webbläsarpolicyer.
 
-Chrome-tillägg är normalt inte aktiverade i inkognitoläge.
+## 2.7 Framtida utveckling
 
-För VKBlock kan administratören aktivera inställningen:
+Den fortsatta utvecklingen fokuserar på att göra VKBlock tillgängligt för fler webbläsare och plattformar.
 
-**Tillägget är obligatoriskt för inkognitoläge (Extension is mandatory for Incognito)**
+Planerade utvecklingsområden:
 
-Inställningen finns bland tilläggets inställningar i Google Admin.
+- Stöd för Safari på iPadOS.
+- Gemensam blockeringslista för flera webbläsare.
+- Förbättrad testning och validering av blockeringsregler.
+- Vidareutveckling av central distribution och hantering.
 
-När policyn tillämpas måste användaren godkänna tillägget för inkognitoläge. Om användaren inte godkänner kan denne inte fortsätta navigera i inkognitoläget.
-
-Godkännandet kan göras genom `chrome://extensions`.
-
-Inställningen har testats i projektets hanterade Chromebook-miljö.
-
-### Testmiljö
-
-Den ursprungliga distributionen av VKBlock har genomförts i organisationsenheten:
-
-`TestShorts`
-
-Följande har verifierats för version 1.0.1:
-
-- Installation via anpassad URL i Google Admin.
-- Tvångsinstallation på hanterad Chromebook.
-- Blockering av YouTube Shorts.
-- Tillgång till vanliga YouTube-videor.
-- Krav på godkännande av tillägget för inkognitoläge.
-
-Version 1.0.2 innehåller ändringar av blockeringssidan, startsidelänken och uppdateringsintervallet. Dessa funktioner ska verifieras innan bredare distribution.
+Målet är att VKBlock ska kunna användas i olika webbläsarmiljöer med samma grundläggande funktionalitet och en gemensamt administrerad blockeringslista.
 
 ---
 
-## Utveckling och paketering av nya versioner
-
-Det här avsnittet beskriver hur en administratör publicerar en ny version av själva tillägget.
-
-### Steg 1 – ändra koden
-
-Gör nödvändiga ändringar i projektets filer på GitHub.
-
-Exempel på ändringar som kräver ny version:
-
-- Ny funktionalitet i `background.js`.
-- Ändringar av intern navigering i `content.js`.
-- Ny design eller funktion i blockeringssidan.
-- Ändringar i `manifest.json`.
-
-Ändringar enbart i `blocklist.json` kräver inte ny tilläggsversion.
-
-### Steg 2 – höj versionsnumret
-
-Öppna `manifest.json` och höj versionsnumret.
-
-Exempel:
-
-```json
-"version": "1.0.3"
-```
-
-Versionsnumret måste vara högre än den version som redan är installerad.
-
-Behåll samma `update_url`:
-
-```json
-"update_url": "https://vikaxe001.github.io/VKBlock/updates.xml"
-```
-
-### Steg 3 – förbered filerna lokalt
-
-Ladda ned projektets uppdaterade källkod från GitHub.
-
-Skapa en separat mapp för tilläggets installationsfiler, exempelvis:
-
-```text
-VKBlock-Package/
-├── manifest.json
-├── background.js
-├── content.js
-├── blocked.html
-└── blocked.js
-```
-
-Ta inte med filer som `README.md`, `updates.xml`, `blocklist.json` eller tidigare CRX-paket i installationsmappen om de inte uttryckligen behövs i tillägget.
-
-**Den privata `.pem`-nyckeln får inte ligga i den mapp som ska paketeras.**
-
-### Steg 4 – paketera tillägget
-
-Öppna Google Chrome på administratörens dator.
-
-1. Navigera till `chrome://extensions`.
-2. Aktivera **Utvecklarläge**.
-3. Klicka på **Pack extension**.
-4. Välj mappen `VKBlock-Package` som *Extension root directory*.
-5. Under *Private key file*, välj den ursprungliga privata `.pem`-nyckeln.
-6. Klicka på **Pack extension**.
-
-Chrome skapar ett nytt signerat CRX-paket.
-
-**Använd alltid samma privata `.pem`-nyckel.**
-
-Tilläggets ID baseras på signeringsnyckeln. Om en annan nyckel används får tillägget ett annat ID och betraktas som ett annat tillägg av Chrome.
-
-### Steg 5 – hantera den privata signeringsnyckeln
-
-`.pem`-filen är den privata nyckel som används för att signera framtida versioner.
-
-Den ska:
-
-- Förvaras säkert och med begränsad åtkomst.
-- Säkerhetskopieras på en godkänd och skyddad plats.
-- Aldrig publiceras på GitHub.
-- Aldrig inkluderas i CRX-paketet.
-- Återanvändas vid varje ny paketering.
-
-Om nyckeln förloras kan det bli nödvändigt att skapa en ny tilläggsidentitet och distribuera ett nytt tillägg via Google Admin.
-
-### Steg 6 – publicera CRX-paketet
-
-Byt namn på det nya CRX-paketet till:
-
-`VKBlock-main.crx`
-
-Ersätt sedan den befintliga filen med samma namn i GitHub-repositoryt.
-
-CRX-paketet publiceras via GitHub Pages på:
-
-`https://vikaxe001.github.io/VKBlock/VKBlock-main.crx`
-
-GitHub Pages måste leverera filen med en Content-Type som Chrome accepterar, exempelvis:
-
-`application/x-chrome-extension`
-
-Detta har verifierats för den ursprungliga distributionen.
-
-### Steg 7 – uppdatera updates.xml
-
-Öppna filen `updates.xml` på GitHub.
-
-Ändra attributet `version` så att det överensstämmer med versionsnumret i `manifest.json`.
-
-Exempel för version 1.0.3:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<gupdate xmlns="http://www.google.com/update2/response"
-         protocol="2.0">
-  <app appid="ohnheegnfgjmplapdldhilognpjcnnal">
-    <updatecheck
-      codebase="https://vikaxe001.github.io/VKBlock/VKBlock-main.crx"
-      version="1.0.3" />
-  </app>
-</gupdate>
-```
-
-Spara genom **Commit changes**.
-
-Kontrollera därefter att GitHub Pages publicerat både den nya CRX-filen och den uppdaterade XML-filen.
-
-Det är viktigt att CRX-paketet finns tillgängligt innan `updates.xml` börjar annonsera den nya versionen.
-
-### Steg 8 – verifiera uppdateringen
-
-Öppna `chrome://extensions` på en testdator där VKBlock är tvångsinstallerat.
-
-Kontrollera vilken version som är installerad.
-
-Chrome söker automatiskt efter nyare versioner. Om administrationspolicyn tillåter kan en manuell kontroll initieras genom knappen **Uppdatera** i tilläggshanteringen.
-
-Uppdateringar sker normalt med några timmars mellanrum och kan inte garanteras inom ett exakt tidsintervall.
-
-När tillägget uppdaterats ska det nya versionsnumret visas.
-
-Verifiera därefter att blockeringsregler, intern navigering, blockeringssida och inkognitoläge fortfarande fungerar.
-
-### Steg 9 – distribution till befintliga användare
-
-Ingen förändring i Google Admin ska normalt behövas vid en vanlig versionsuppdatering.
-
-Befintliga installationer uppdateras automatiskt om:
-
-- Det signerade paketet har samma tilläggs-ID.
-- Versionsnumret är högre än tidigare.
-- `updates.xml` pekar på rätt CRX-paket.
-- Paketet är signerat med samma privata nyckel.
-- Chrome kan nå uppdateringsadressen.
-
-Det rekommenderas att nya versioner alltid verifieras på en begränsad testgrupp före bredare driftsättning.
-
-Eftersom den aktuella distributionen använder samma uppdateringsadress för samtliga användare får alla klienter som omfattas av den adressen tillgång till den nya versionen när den publiceras.
-
-För separat testning och produktionsdrift bör olika uppdateringskanaler eller separata tilläggsidentiteter övervägas.
-
----
-
-## Säkerhet och begränsningar
-
-VKBlock är avsett som ett administrativt stöd för att begränsa åtkomsten till utvalda webbadresser.
-
-Det ska inte betraktas som ett fullständigt webbsäkerhetsfilter.
-
-En URL-blockering innebär inte att innehållet i sig blockeras om samma innehåll kan nås genom en annan adress, domän eller tjänst.
-
-Tillägget har breda webbplatsbehörigheter för att kunna stödja intern navigering på flera olika webbplatser. Koden bör därför granskas och testas vid förändringar.
-
-VKBlock är utformat för att inte samla in eller överföra elevernas webbhistorik eller användaridentiteter.
-
-Hämtning av den centrala blockeringslistan innebär dock vanlig nätverkskommunikation med GitHub Pages, där exempelvis klientens IP-adress kan behandlas av tjänsteleverantören.
-
-Eftersom blockeringslistan distribueras offentligt via GitHub Pages ska den inte innehålla lösenord, personuppgifter eller annan skyddsvärd information.
-
-## Teknik
-
-VKBlock bygger på:
-
-- Google Chrome Extensions Manifest V3
-- Chrome Declarative Net Request API
-- Chrome Storage API
-- Chrome Alarms API
-- JavaScript, HTML och CSS
-- GitHub Pages
-- Google Workspace for Education
-
-## Projektstatus
-
-**Version under test:** 1.0.2
-
-**Verifierad distributionsmiljö:** Hanterad Chromebook via Google Admin.
-
-**Test-OU:** TestShorts.
-
-**Distribution:** Självhostat CRX-paket via GitHub Pages.
-
-**Licens:** Någon programvarulicens har inte specificerats för detta repository. Koden är inte automatiskt licensierad för fri återanvändning enbart för att repositoryt är publikt.
-
----
-
-VKBlock – central och flexibel URL-blockering för hanterade Chrome-miljöer.
+**VKBlock – central hantering av webbadressblockering.**
