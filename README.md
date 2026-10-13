@@ -1,8 +1,8 @@
 # VKBlock
 
-**VKBlock** är ett kostnadsfritt Chrome-tillägg för central blockering av webbadresser i hanterade Google Chrome-miljöer. Tillägget är utvecklat med fokus på Google Workspace for Education och kan distribueras centralt till användare via Google Admin.
+**VKBlock** är en tjänst för att begränsa åtkomsten till valda webbplatser i webbläsare utifrån en fördefinierad blocklista.
 
-Syftet är att möjliggöra flexibel och central hantering av blockerade webbadresser utan att behöva uppdatera eller installera om tillägget varje gång blockeringslistan förändras.
+Syftet är att möjliggöra flexibel och central hantering av blockerade webbadresser utan att behöva uppdatera eller installera om mjukvaran varje gång blockeringslistan förändras.
 
 VKBlock använder en offentligt tillgänglig blockeringslista på GitHub Pages och uppdaterar denna automatiskt med ett konfigurerbart intervall.
 
