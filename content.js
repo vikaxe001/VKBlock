@@ -4,6 +4,7 @@
   let blockedEntries = [];
   let lastCheckedUrl = "";
 
+  // Kontrollerar om webbadressen matchar blockeringslistan.
   function isBlocked(address) {
     let url;
 
@@ -17,29 +18,40 @@
       return false;
     }
 
-    const host = url.hostname.toLowerCase();
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
 
     return blockedEntries.some(entry => {
+      if (!entry || typeof entry.domain !== "string" ||
+          typeof entry.path !== "string") {
+        return false;
+      }
+
       const domain = entry.domain.toLowerCase();
       const path = entry.path;
 
+      // Matchar domänen och dess underdomäner.
       const hostMatches =
         host === domain ||
-        host === "www." + domain ||
-        host === "m." + domain;
+        host.endsWith("." + domain);
 
-      return hostMatches && (
+      // En domänregel blockerar hela webbplatsen.
+      // En sökvägsregel blockerar endast angiven
+      // sökväg och dess undersidor.
+      const pathMatches =
+        path === "/" ||
         url.pathname === path ||
-        (path !== "/" &&
-          url.pathname.startsWith(path + "/"))
-      );
+        url.pathname.startsWith(path + "/");
+
+      return hostMatches && pathMatches;
     });
   }
 
   function checkUrl() {
     const currentUrl = location.href;
 
-    if (currentUrl === lastCheckedUrl) return;
+    if (currentUrl === lastCheckedUrl) {
+      return;
+    }
 
     lastCheckedUrl = currentUrl;
 
@@ -52,24 +64,36 @@
     }
   }
 
+  // Hämtar lokalt lagrade blockeringsregler.
   chrome.storage.local.get("blockedEntries", result => {
-    blockedEntries = result.blockedEntries || [];
+    blockedEntries = Array.isArray(result.blockedEntries)
+      ? result.blockedEntries
+      : [];
+
     checkUrl();
   });
 
+  // Uppdaterar reglerna när background.js
+  // har hämtat en ny blockeringslista.
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "local" && changes.blockedEntries) {
-      blockedEntries = changes.blockedEntries.newValue || [];
+      blockedEntries = Array.isArray(
+        changes.blockedEntries.newValue
+      )
+        ? changes.blockedEntries.newValue
+        : [];
+
       lastCheckedUrl = "";
       checkUrl();
     }
   });
 
+  // Kontrollerar navigering utan fullständig sidladdning.
   window.addEventListener("popstate", checkUrl);
   window.addEventListener("hashchange", checkUrl);
   window.addEventListener("yt-navigate-finish", checkUrl);
 
-  // Kontroll av interna sidbyten.
-  // Inga nätverksanrop sker här.
+  // Fångar även adressändringar som inte genererar
+  // vanliga navigeringshändelser.
   setInterval(checkUrl, 500);
 })();
