@@ -41,7 +41,11 @@ function isBlocked(address, entries) {
     const host = url.hostname.toLowerCase().replace(/\.$/, "");
     return entries.some(({ domain, path }) =>
       (host === domain || host.endsWith("." + domain)) &&
-      (path === "/" || url.pathname === path || url.pathname.startsWith(path + "/"))
+      (
+        path === "/" ||
+        url.pathname === path ||
+        url.pathname.startsWith(path + "/")
+      )
     );
   } catch { return false; }
 }
@@ -86,7 +90,21 @@ function getHomepage(value, entries) {
   }
 }
 
+async function calculateHash(text) {
+  const data = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+let updateInProgress = false;
 async function updateBlocklist() {
+  if (updateInProgress) return;
+
+  updateInProgress = true;
+  
   try {
     const response = await fetch(BLOCKLIST_URL, {
       cache: "no-cache"
@@ -95,8 +113,37 @@ async function updateBlocklist() {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
-
+    
     const text = await response.text();
+    
+    // Beräkna kontrollsumma för den hämtade blockeringslistan.
+    const newHash = await calculateHash(text);
+    
+    // Hämta tidigare kontrollsumma och sparade regler.
+    const stored = await chrome.storage.local.get([
+      "blocklistHash",
+      "blockedEntries"
+    ]);
+    
+    // Kontrollera att reglerna faktiskt finns installerade.
+    // Om inga dynamiska regler finns ska de återskapas,
+    // även om filens innehåll är oförändrat.
+    const installedRules =
+      await chrome.declarativeNetRequest.getDynamicRules();
+    
+    if (
+      stored.blocklistHash === newHash &&
+      Array.isArray(stored.blockedEntries) &&
+      installedRules.length === stored.blockedEntries.length &&
+      installedRules
+      .map(rule => rule.id)
+      .sort((a, b) => a - b)
+      .every((id, index) => id === index + 1)
+    ) {
+      console.log("VKBlock: Blockeringslistan är oförändrad.");
+      return;
+    }
+    
     const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
     const entries = lines.map(normalizeEntry).filter(Boolean);
 
@@ -130,12 +177,15 @@ async function updateBlocklist() {
     await chrome.storage.local.set({
       blockedEntries: entries,
       homepage: getHomepage(DEFAULT_HOME, entries),
+      blocklistHash: newHash,
       lastUpdated: new Date().toISOString()
     });
 
     console.log("VKBlock: Uppdaterade", rules.length, "regler");
   } catch (error) {
     console.error("VKBlock: Uppdatering misslyckades", error);
+  } finally {
+    updateInProgress = false;
   }
 }
 
