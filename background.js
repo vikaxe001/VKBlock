@@ -1,4 +1,3 @@
-
 const BLOCKLIST_URL =
   "https://vikaxe001.github.io/VKBlock/blocklist.txt";
 
