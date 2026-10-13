@@ -89,7 +89,7 @@ function getHomepage(value, entries) {
 async function updateBlocklist() {
   try {
     const response = await fetch(BLOCKLIST_URL, {
-      cache: "no-store"
+      cache: "no-cache"
     });
 
     if (!response.ok) {
