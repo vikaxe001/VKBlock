@@ -1,7 +1,7 @@
 const BLOCKLIST_URL =
   "https://vikaxe001.github.io/VKBlock/blocklist.txt";
 
-const UPDATE_INTERVAL = 5;
+const UPDATE_INTERVAL = 15;
 const ALARM_NAME = "update-blocklist";
 const DEFAULT_HOME = "https://sites.google.com/utb.vaxjo.se/start";
 
