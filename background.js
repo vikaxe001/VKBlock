@@ -1,70 +1,59 @@
+
 const BLOCKLIST_URL =
-  "https://vikaxe001.github.io/VKBlock/blocklist.json";
+  "https://vikaxe001.github.io/VKBlock/blocklist.txt";
 
 const UPDATE_INTERVAL = 5;
 const ALARM_NAME = "update-blocklist";
-const DEFAULT_HOME = "https://www.google.com/";
+const DEFAULT_HOME = "https://sites.google.com/utb.vaxjo.se/start";
 
 function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function normalizeEntry(entry) {
-  if (!entry ||
-      typeof entry.domain !== "string" ||
-      typeof entry.path !== "string") {
-    throw new Error("Ogiltig blockeringsregel");
+// En rad: domän eller domän/sökväg. HTTPS-prefix accepteras också.
+function normalizeEntry(line) {
+  const value = line.trim();
+  if (!value || value.startsWith("#")) return null;
+  if (/\s/.test(value)) throw new Error("Mellanslag i blockeringsregel: " + value);
+
+  let url;
+  try {
+    url = new URL(/^https?:\/\//i.test(value) ? value : "https://" + value);
+  } catch {
+    throw new Error("Ogiltig blockeringsregel: " + value);
   }
 
-  const domain = entry.domain.toLowerCase()
-    .replace(/^(www|m)\./, "");
-
-  const path = entry.path.replace(/\/+$/, "") || "/";
-
-  if (!/^[a-z0-9.-]+$/.test(domain) ||
-      !domain.includes(".") ||
-      !path.startsWith("/") ||
+  const domain = url.hostname.toLowerCase().replace(/\.$/, "");
+  const path = url.pathname.replace(/\/+$/, "") || "/";
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password ||
+      url.port || url.search || url.hash ||
+      !/^(?:[a-z0-9-]+\.)+[a-z0-9-]+$/.test(domain) ||
+      domain.split(".").some(part => part.startsWith("-") || part.endsWith("-")) ||
       /[?#*]/.test(path)) {
-    throw new Error("Ogiltig domän eller sökväg");
+    throw new Error("Ogiltig domän eller sökväg: " + value);
   }
-
   return { domain, path };
 }
 
 function isBlocked(address, entries) {
   try {
     const url = new URL(address);
-    const host = url.hostname.toLowerCase();
-
-    return entries.some(entry => {
-      const domain = entry.domain;
-      const hostMatches =
-        host === domain ||
-        host === "www." + domain ||
-        host === "m." + domain;
-
-      return hostMatches && (
-        url.pathname === entry.path ||
-        (entry.path !== "/" &&
-          url.pathname.startsWith(entry.path + "/"))
-      );
-    });
-  } catch {
-    return false;
-  }
+    if (!['http:', 'https:'].includes(url.protocol)) return false;
+    const host = url.hostname.toLowerCase().replace(/\.$/, "");
+    return entries.some(({ domain, path }) =>
+      (host === domain || host.endsWith("." + domain)) &&
+      (path === "/" || url.pathname === path || url.pathname.startsWith(path + "/"))
+    );
+  } catch { return false; }
 }
 
 function createRule(entry, id) {
   const domain = escapeRegex(entry.domain);
-  const pathname = escapeRegex(entry.path);
+  const path = entry.path === "/" ? "/" : escapeRegex(entry.path);
 
-  const pathEnd = entry.path === "/"
-    ? ".*"
-    : "(?:[/?#]|$).*";
-
-  const regex =
-    `^https?://(?:(?:www|m)\\.)?${domain}` +
-    `${pathname}${pathEnd}`;
+  // /view/classroom6x2 får INTE matcha /view/classroom6x
+  const end = entry.path === "/" ? ".*" : "(?:[/?#]|$).*";
+  const regex = `^https?://(?:[a-z0-9-]+\\.)*${domain}(?::[0-9]+)?${path}${end}`;
 
   return {
     id,
@@ -72,8 +61,7 @@ function createRule(entry, id) {
     action: {
       type: "redirect",
       redirect: {
-        regexSubstitution:
-          chrome.runtime.getURL("blocked.html") + "#\\0"
+        regexSubstitution: chrome.runtime.getURL("blocked.html") + "#\\0"
       }
     },
     condition: {
@@ -109,14 +97,14 @@ async function updateBlocklist() {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    const text = await response.text();
+    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+    const entries = lines.map(normalizeEntry).filter(Boolean);
 
-    if (!Array.isArray(data.blocked) ||
-        data.blocked.length > 1000) {
-      throw new Error("Ogiltig blockeringslista");
+    if (!entries.length || entries.length > 1000) {
+      throw new Error("Blockeringslistan måste innehålla 1–1000 giltiga regler");
     }
 
-    const entries = data.blocked.map(normalizeEntry);
     const rules = entries.map((entry, index) =>
       createRule(entry, index + 1)
     );
@@ -128,9 +116,7 @@ async function updateBlocklist() {
         });
 
       if (!result.isSupported) {
-        throw new Error(
-          "Regex stöds inte: " + result.reason
-        );
+        throw new Error("Regex stöds inte: " + result.reason);
       }
     }
 
@@ -144,20 +130,13 @@ async function updateBlocklist() {
 
     await chrome.storage.local.set({
       blockedEntries: entries,
-      homepage: getHomepage(data.homepage, entries),
+      homepage: getHomepage(DEFAULT_HOME, entries),
       lastUpdated: new Date().toISOString()
     });
 
-    console.log(
-      "VKBlock: Uppdaterade",
-      rules.length,
-      "regler"
-    );
+    console.log("VKBlock: Uppdaterade", rules.length, "regler");
   } catch (error) {
-    console.error(
-      "VKBlock: Uppdatering misslyckades",
-      error
-    );
+    console.error("VKBlock: Uppdatering misslyckades", error);
   }
 }
 
