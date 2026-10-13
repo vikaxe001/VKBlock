@@ -59,7 +59,6 @@ Exempel: `sites.google.com/view/classroom6x/` blockerar:
 Men tillåter:
 
 - `sites.google.com/view/legitimsida`
-- `sites.google.com/view/classroom6x2/`
 
 Tomma rader ignoreras och rader som börjar med `#` kan användas som kommentarer.
 
