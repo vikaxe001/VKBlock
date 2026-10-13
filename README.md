@@ -4,30 +4,10 @@ En tjänst för att begränsa åtkomsten till valda webbplatser i webbläsare ut
 
 VKBlock gör det möjligt att centralt administrera vilka webbplatser eller delar av webbplatser som ska blockeras. Blockeringslistan uppdateras automatiskt utan att tillägget behöver installeras om.
 
-**Aktuell version:** 1.0.4  
+**Aktuell version:** 1.0.5  
 **Webbläsarstöd:** Chrome (stöd för Safari planeras)  
 **Konfiguration:** Central `blocklist.txt`  
 **Källkod:** [GitHub](https://github.com/vikaxe001/VKBlock)
-
----
-
-## Innehållsförteckning
-
-### 1. Beskrivning av tjänsten
-- [1.1 Syfte och funktion](#11-syfte-och-funktion)
-- [1.2 Blockeringsregler](#12-blockeringsregler)
-- [1.3 Uppdatering och lokal lagring](#13-uppdatering-och-lokal-lagring)
-- [1.4 Informationssäkerhet och integritet](#14-informationssäkerhet-och-integritet)
-- [1.5 Begränsningar](#15-begränsningar)
-
-### 2. Utveckling av tjänsten
-- [2.1 Teknik och arkitektur](#21-teknik-och-arkitektur)
-- [2.2 Projektets filer](#22-projektets-filer)
-- [2.3 Hantering av blockeringslistan](#23-hantering-av-blockeringslistan)
-- [2.4 Utveckling och testning](#24-utveckling-och-testning)
-- [2.5 Paketering och publicering](#25-paketering-och-publicering)
-- [2.6 Central distribution](#26-central-distribution)
-- [2.7 Framtida utveckling](#27-framtida-utveckling)
 
 ---
 
@@ -46,21 +26,20 @@ VKBlock erbjuder:
 - Fortsatt blockering vid tillfälliga uppdateringsproblem.
 - Hantering av dynamisk navigering inom webbplatser.
 - Anpassad blockeringssida med länk till en fördefinierad startsida.
+- Central distribution och hantering i organisationens webbläsarmiljö.
 
 Tjänsten består av ett webbläsartillägg och en centralt publicerad blockeringslista. Blockeringen genomförs lokalt i användarens webbläsare.
 
 ## 1.2 Blockeringsregler
 
-Blockeringslistan hanteras genom en textfil, `blocklist.txt`, där varje rad motsvarar en blockeringsregel.
+Blockeringslistan hanteras genom textfilen `blocklist.txt`, där varje rad motsvarar en blockeringsregel.
 
 Exempel:
 
-```text
-sites.google.com/view/classroom6x/
-1001games.com
-aarp.org
-youtube.com/shorts/
-```
+    sites.google.com/view/classroom6x/
+    1001games.com
+    aarp.org
+    youtube.com/shorts/
 
 **Domänblockering**
 
@@ -86,27 +65,31 @@ Tomma rader ignoreras och rader som börjar med `#` kan användas som kommentare
 
 ## 1.3 Uppdatering och lokal lagring
 
-VKBlock hämtar blockeringslistan från en central adress med ett fördefinierat intervall, normalt var femte minut.
+VKBlock kontrollerar den centrala blockeringslistan var 15:e minut.
 
-Reglerna lagras lokalt på användarens enhet och fortsätter att fungera även om en uppdatering tillfälligt misslyckas.
+För att minimera nätverkstrafik och resursanvändning används:
 
-Ändringar i blockeringslistan kräver därför ingen ny version av tillägget.
+- **HTTP-cachevalidering:** Webbläsaren kan återanvända tidigare hämtad information om blockeringslistan inte förändrats.
+- **SHA-256:** En kontrollsumma används för att avgöra om blockeringslistans innehåll har förändrats.
+- **Villkorad regeluppdatering:** Blockeringsreglerna byggs endast om när innehållet förändrats eller när installerade regler behöver återskapas.
 
-Ändringar i programkoden kräver däremot att en ny version publiceras och distribueras.
+Reglerna lagras lokalt och fortsätter att fungera även om en uppdatering tillfälligt misslyckas.
+
+Ändringar i blockeringslistan kräver ingen ny version av tillägget. Ändringar i programkoden kräver däremot en ny version.
 
 ## 1.4 Informationssäkerhet och integritet
 
 VKBlock genomför blockeringen lokalt och skickar inte användarnas webbhistorik eller uppgifter om blockerade sidbesök till någon central tjänst.
 
-Den centrala blockeringslistan innehåller endast regler för vilka webbadresser som ska blockeras.
+Blockeringslistan innehåller endast regler för vilka webbadresser som ska blockeras.
 
-Källkoden är öppet tillgänglig för granskning och vidareutveckling. Åtkomst till publicering och ändring av blockeringslistan bör begränsas till behöriga personer.
+Källkoden är öppet tillgänglig för granskning. Behörigheten att ändra programkoden och den centrala blockeringslistan bör begränsas till behöriga personer.
 
 ## 1.5 Begränsningar
 
 VKBlock fungerar endast i webbläsare där tillägget stöds, är installerat och aktiverat.
 
-Blockeringen baseras på webbadresser och inte på analys av webbplatsers innehåll. Det innebär att samma innehåll i vissa fall kan nås genom alternativa domäner eller tjänster.
+Blockeringen baseras på webbadresser och inte på analys av webbplatsers innehåll. Innehåll kan därför i vissa fall nås via alternativa domäner eller tjänster.
 
 På webbplatser med dynamisk navigering kan en kort fördröjning förekomma innan blockeringen genomförs.
 
@@ -120,7 +103,7 @@ VKBlock är ett kompletterande verktyg för webbadressblockering och ska inte be
 
 VKBlock är utvecklat med JavaScript, HTML och CSS.
 
-Den nuvarande implementationen använder Chrome Extensions Manifest V3 och följande API:er:
+Den nuvarande Chrome-versionen använder Manifest V3 och följande API:er:
 
 - `declarativeNetRequest` – blockering av webbadresser.
 - `storage` – lokal lagring av konfiguration och blockeringsregler.
@@ -132,7 +115,7 @@ GitHub används för versionshantering och GitHub Pages för publicering av bloc
 
 | Fil | Funktion |
 |---|---|
-| `manifest.json` | Konfiguration, behörigheter och version. |
+| `manifest.json` | Konfiguration, behörigheter, version och ikoner. |
 | `background.js` | Hämtning och uppdatering av blockeringsregler. |
 | `content.js` | Kontroll av dynamiska adressändringar. |
 | `blocked.html` | Blockeringssidans innehåll och utseende. |
@@ -140,6 +123,7 @@ GitHub används för versionshantering och GitHub Pages för publicering av bloc
 | `blocklist.txt` | Centralt administrerad blockeringslista. |
 | `updates.xml` | Information om nya tilläggsversioner. |
 | `VKBlock-main.crx` | Signerat installationspaket för Chrome. |
+| `icons/` | Tilläggets ikoner i PNG-format (16, 48 och 128 px). |
 
 ## 2.3 Hantering av blockeringslistan
 
@@ -151,8 +135,8 @@ För att ändra blockerade webbadresser:
 
 1. Öppna `blocklist.txt` i GitHub.
 2. Lägg till, ändra eller ta bort regler.
-3. Spara genom att skapa en commit.
-4. Kontrollera att ändringen publicerats via GitHub Pages.
+3. Spara ändringarna genom att skapa en commit.
+4. Kontrollera att filen har publicerats via GitHub Pages.
 
 Tillägget hämtar därefter den uppdaterade listan automatiskt.
 
@@ -160,7 +144,7 @@ Varje rad ska innehålla en giltig domän eller domän med sökväg. Den nuvaran
 
 ## 2.4 Utveckling och testning
 
-Den aktuella Chrome-versionen kan testas lokalt genom att läsa in tillägget i utvecklarläge.
+Chrome-versionen kan testas lokalt:
 
 1. Ladda ned projektets källkod.
 2. Öppna `chrome://extensions`.
@@ -168,25 +152,21 @@ Den aktuella Chrome-versionen kan testas lokalt genom att läsa in tillägget i 
 4. Välj **Läs in opaketerat tillägg**.
 5. Välj mappen som innehåller `manifest.json`.
 
-Verifiera särskilt att:
+Verifiera att domäner och sökvägar blockeras korrekt, att blockeringssidan fungerar och att tidigare regler kvarstår vid tillfälliga uppdateringsproblem.
 
-- Domäner och sökvägar blockeras korrekt.
-- Andra sökvägar på samma domän förblir tillgängliga.
-- Blockeringssidan fungerar.
-- Dynamisk navigering hanteras.
-- Befintliga regler kvarstår vid uppdateringsfel.
+Kontrollera även att ikonerna visas korrekt i tilläggshanteringen.
 
 ## 2.5 Paketering och publicering
 
-Ändringar i programkoden kräver en ny version av tillägget.
+Ändringar i programkoden eller tilläggets resurser kräver en ny version.
 
-För Chrome gäller följande:
+För Chrome:
 
 1. Uppdatera versionsnumret i `manifest.json`.
 2. Testa ändringarna.
 3. Paketera tillägget som en CRX-fil.
 4. Använd samma privata signeringsnyckel som tidigare.
-5. Publicera den nya CRX-filen.
+5. Publicera det nya CRX-paketet.
 6. Uppdatera versionsnumret i `updates.xml`.
 
 **Viktigt:** Den privata signeringsnyckeln (`.pem`) får inte publiceras i GitHub.
@@ -204,12 +184,9 @@ VKBlock är utformat för att kunna distribueras och hanteras centralt i organis
 
 Chrome-versionen kan distribueras genom Google Admin till hanterade användare och enheter.
 
-Tilläggs-ID:
+**Tilläggs-ID:** `ohnheegnfgjmplapdldhilognpjcnnal`
 
-`ohnheegnfgjmplapdldhilognpjcnnal`
-
-Uppdateringsadress:
-
+**Uppdateringsadress:**  
 `https://vikaxe001.github.io/VKBlock/updates.xml`
 
 I Google Admin kan tillägget konfigureras för tvingande installation och central hantering.
