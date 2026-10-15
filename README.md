@@ -4,7 +4,7 @@ En tjänst för att begränsa åtkomsten till valda webbplatser i webbläsare ut
 
 VKBlock gör det möjligt att centralt administrera vilka webbplatser eller delar av webbplatser som ska blockeras. Blockeringslistan uppdateras automatiskt utan att tillägget behöver installeras om.
 
-**Aktuell version:** 1.0.5  
+**Aktuell version:** 1.0.6  
 **Webbläsarstöd:** Chrome (stöd för Safari planeras)  
 **Konfiguration:** Central `blocklist.txt`  
 **Källkod:** [GitHub](https://github.com/vikaxe001/VKBlock)
