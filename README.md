@@ -183,11 +183,6 @@ VKBlock är utformat för att kunna distribueras och hanteras centralt i organis
 
 Chrome-versionen kan distribueras genom Google Admin till hanterade användare och enheter.
 
-**Tilläggs-ID:** `ohnheegnfgjmplapdldhilognpjcnnal`
-
-**Uppdateringsadress:**  
-`https://vikaxe001.github.io/VKBlock/updates.xml`
-
 I Google Admin kan tillägget konfigureras för tvingande installation och central hantering.
 
 Användning i inkognitoläge styrs genom tillämpliga webbläsarpolicyer.
