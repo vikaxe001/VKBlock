@@ -108,6 +108,7 @@ browser.lol
 soundboardbuttons.com
 rocketgames.io
 shellchock.io
+shellshock.io
 legionplatforms.com
 youtube.com/shorts
 sloperider.org
@@ -117,4 +118,5 @@ lolbeans.io
 spacewaves.io
 dariagames.com
 subway-surfers.gg
+subwaysurfers.gg
 washingtonpost.com/games
