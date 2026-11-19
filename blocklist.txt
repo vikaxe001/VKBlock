@@ -125,3 +125,6 @@ yoplay.io
 chateni.com
 freezenova.games
 puzzio.io
+croxyproxy.rocks
+create.wan
+claude.ai
